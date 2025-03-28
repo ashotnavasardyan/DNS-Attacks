@@ -1,0 +1,77 @@
+version: '3.8'
+
+networks:
+  cyhub:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.18.0.0/24
+
+services:
+
+  pi-hole-dns:
+    image: pihole/pihole:2023.10.0
+    container_name: pi-hole-dns
+    networks:
+      cyhub:
+        ipv4_address: 172.18.0.2
+    ports:
+      - "5380:80/tcp"
+      - "53:53/tcp"
+      - "53:53/udp"
+    environment:
+      TZ: "UTC"
+      WEBPASSWORD: "admin"
+    volumes:
+      - ./pi-hole/etc-pihole:/etc/pihole
+      - ./pi-hole/etc-dnsmasq:/etc/dnsmasq.d
+    restart: unless-stopped
+
+
+  xss-demo:
+    image: nginx
+    container_name: xss-demo
+    networks:
+      cyhub:
+        ipv4_address: 172.18.0.3
+    ports:
+      - "9001:80"
+    dns:
+      - 172.18.0.2
+    volumes:
+      - ./xss-demo:/usr/share/nginx/html
+      - ./xss-demo/nginx/default.conf:/etc/nginx/conf.d/default.conf
+
+  xss-demo-bot:
+    build:
+      context: ./xss-demo/bot
+    container_name: xss-demo-bot
+    networks:
+      cyhub:
+        ipv4_address: 172.18.0.4
+    dns:
+      - 172.18.0.2
+
+  ssrf-demo:
+    build:
+      context: ./ssrf-demo/
+    container_name: ssrf-demo
+    networks:
+      cyhub:
+        ipv4_address: 172.18.0.5
+    ports:
+      - "9002:3000"
+    dns:
+      - 172.18.0.2
+
+  sop-demo:
+    build:
+      context: ./sop-demo/
+    container_name: sop-demo
+    networks:
+      cyhub:
+        ipv4_address: 172.18.0.6
+    ports:
+      - "9003:9003"
+    dns:
+      - 172.18.0.2
